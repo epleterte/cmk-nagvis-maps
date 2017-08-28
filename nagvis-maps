@@ -184,7 +184,7 @@ for group in target_hostgroups:
     nagvis_map = """define global {{
 object_id=0
 iconset=std_big
-dynmap_object_filter=Filter: groups >= {group}\n
+dynmap_object_filter=Filter: groups >= {group}\\n
 sources=dynmap
 dynmap_object_types=host
 grid_show=0
