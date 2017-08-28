@@ -42,6 +42,7 @@ config = {
     'backend': 'localhost',
     'image_path': sys.path[0],
     'nagvis_image_path': '',
+    'livestatus_socket': '',
     'debug': True
 }
 
