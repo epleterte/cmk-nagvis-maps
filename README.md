@@ -4,6 +4,13 @@
 This project reads hostgroup data off of Livestatus, and generates a dynamic Nagvis map for each group.
 In addition an 'overview map' of all hostgroups in the given backend is generated.
 
+Installation
+============
+
+    git clone https://github.com/epleterte/cmk-nagvis-maps.git
+    cd cmk-nagvis-maps
+    sudo cp nagvis-maps /usr/local/bin/
+
 Configuration
 =============
 Configuration lives in _~/.nagmaps.yml_
