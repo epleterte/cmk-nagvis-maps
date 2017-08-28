@@ -190,6 +190,11 @@ sources=dynmap
 dynmap_object_types=host
 grid_show=0
 label_show=1
+dynmap_offset_x=270
+dynmap_init_y=300
+dynmap_init_x=100
+dynmap_per_row=5
+dynmap_offset_y=80
 }}
 
 define shape {{
