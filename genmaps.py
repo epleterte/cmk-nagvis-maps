@@ -8,10 +8,10 @@ from __future__ import print_function
 import socket
 import os
 import sys
+import argparse
 import json
 import yaml
 import requests
-import argparse
 
 MOCK_DATA = True
 DEBUG = True
@@ -62,12 +62,12 @@ else:
     print('no config file found at %s, using defaults' % config_path)
 
 if args.dump_config:
-  print(config)
-  sys.exit()
+    print(config)
+    sys.exit()
 if args.output_dir != '':
-  if not os.path.exists(args.output_dir):
-    print("Output directory %s does not exist!" %s (args.output_dir)) 
-    sys.exit(1)
+    if not os.path.exists(args.output_dir):
+        print("Output directory %s does not exist!" % (args.output_dir))
+        sys.exit(1)
 
 if MOCK_DATA:
     response = '[["cust-finance"], ["cust-catering"]]'
@@ -115,10 +115,10 @@ else:
         print("Could not fetch host groups from LiveStatus: %s" % (err))
 
 #hostgroups = response.split('\n')
-json=json.loads(response)
+json = json.loads(response)
 hostgroups = [x[0] for x in json]
 
-target_hostgroups=[]
+target_hostgroups = []
 
 for group in hostgroups:
     if config['debug']: print("looking at group %s" % (group))
