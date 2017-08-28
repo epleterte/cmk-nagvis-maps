@@ -44,11 +44,11 @@ Usage
 Once the config is properly set up, run the script to generate maps.
 The script will write files to the directory specified by the `-o` argument, if not files are written to the current directory.
 
-    ./genmaps.py -o /etc/nagvis/maps/
+    nagvis-maps -o /etc/nagvis/maps/
 
 The script can be run from cron to ensure generation of maps on a regular basis.
 
-    */30 * * * * genmaps.py -o /etc/nagvis/maps/
+    */30 * * * * nagvis-maps -o /etc/nagvis/maps/
 
 License
 =======
