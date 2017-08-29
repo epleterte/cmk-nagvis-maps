@@ -24,16 +24,6 @@ example_yaml_config = """groups:
     logo: 'cateringlogo.png'
     url: 'https://confluence.example.com/INT/catering'"""
 
-## config defaults
-#config = {
-#    'mqtt_server': 'mqttserver',
-#    'mqtt_topics': {
-#        'home/bedroom/sensor2': ['temperature']
-#    },
-#    'carbon_server': 'graphiteserver',
-#    'carbon_port': 2003
-#}
-
 # os.path.dirname(os.path.realpath(__file__))
 config = {
     'hostgroup_include': [],
@@ -65,9 +55,6 @@ else:
     print('[ WARN ] no config file found at %s, using defaults' % config_path)
 
 if args.debug:
-    #loglevel_numeric = getattr(logging, 'DEBUG', None)
-    #logging.basicConfig(loglevel=loglevel_numeric)
-    #print('setting debug mode: %s' % (loglevel_numeric))
     config['loglevel'] = 'debug'
 
 ## set up logging
@@ -120,14 +107,7 @@ else:
         s.connect(socket_path)
         #hostgroups = s.send("GET hostgroups\nColumns: name\nOutputFormat: json\nResponseHeader: fixed16\nColumnHeaders: on\n")
         s.send("GET hostgroups\nColumns: name alias\nOutputFormat: json\n")
-
-        # Important: Close sending direction. That way
-        # the other side knows we are finished.
         s.shutdown(socket.SHUT_WR)
-
-        # Parse the answer into a table (a list of lists)
-        #table = [ line.split(';') for line in answer.split('\n')[:-1] ]
-
         response = s.recv(100000000)
     except OSError as err:
         logging.critical("Could not fetch host groups from LiveStatus: %s", err)
