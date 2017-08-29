@@ -38,13 +38,17 @@ config = {
     'debug': False
 }
 
-
 argparse = argparse.ArgumentParser()
+argparse.add_argument('-c', '--config', help='Specify config file')
 argparse.add_argument('-D', '--dump-config', action='store_true')
 argparse.add_argument('-d', '--debug', action='store_true')
-argparse.add_argument('-o', '--output-dir', nargs=1, default='.')
 argparse.add_argument('-m', '--mock-data', action='store_true')
+argparse.add_argument('-o', '--output-dir', help='Output directory. Autodetection will be attempted if omitted (OMD supported)')
+argparse.add_argument('-s', '--socket', help='Specify Livestatus socket')
 args = argparse.parse_args()
+
+if args.config:
+    config_path = args.config
 
 if os.path.exists(config_path):
     with open(config_path, 'r') as ymlfile:
@@ -58,19 +62,27 @@ if args.debug:
     config['loglevel'] = 'debug'
 
 ## set up logging
-
 loglevel_numeric = getattr(logging, config['loglevel'].upper(), None)
 if not isinstance(loglevel_numeric, int):
     raise ValueError('Invalid log level: %s' % config['loglevel'])
 logging.basicConfig(format='%(levelname)s:%(asctime)s:%(message)s', level=loglevel_numeric)
 
-
 if args.dump_config:
     print(config)
     sys.exit()
-if args.output_dir != '':
+
+if args.output_dir:
+    print(args.output_dir)
     if not os.path.exists(args.output_dir):
         logging.error("Output directory %s does not exist!", args.output_dir)
+        sys.exit(1)
+else:
+    if 'OMD_ROOT' in os.environ:
+        args.output_dir = os.path.join(os.environ['OMD_ROOT'], 'etc/nagvis/maps')
+    elif os.path.exists('/etc/nagvis/maps'):
+        args.output_dir = '/etc/nagvis/maps'
+    else:
+        logging.critical("Could not autodetect nagvis maps directory ($OMD_ROOT/etc/nagvis/maps, /etc/nagvis/maps)") # pylint: line-too-long
         sys.exit(1)
 
 if args.mock_data:
@@ -79,6 +91,9 @@ else:
     if config['livestatus_socket'] != '':
         if os.path.exists(config['livestatus_socket']):
             socket_path = config['livestatus_socket']
+        else:
+            logging.critical("Specified livestatus_socket path does not eexist: %s", config['livestatus_socket'])
+            sys.exit(1)
     else:
         if 'OMD_ROOT' in os.environ:
             socket_path = os.path.join(os.environ['OMD_ROOT'], 'tmp/run/live')
@@ -101,7 +116,6 @@ else:
             logging.critical("Failed to detect Nagvis image path - exiting...")
             sys.exit(1)
 
-
     try:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.connect(socket_path)
@@ -113,12 +127,10 @@ else:
         logging.critical("Could not fetch host groups from LiveStatus: %s", err)
         sys.exit(1)
 
-
 #hostgroups = response.split('\n')
 json = json.loads(response)
 #hostgroups = [x[0] for x in json]
 hostgroups = json
-
 target_hostgroups = []
 
 for group, alias in hostgroups:
@@ -171,7 +183,7 @@ for group, alias in target_hostgroups:
                     try:
                         #requests.get(logo)
                         r = requests.get(logo, stream=True)
-                        with open(os.path.join(config['image_path'], os.path.basename(logo)), 'wb') as fd:
+                        with open(os.path.join(config['image_path'], os.path.basename(logo)), 'wb') as fd: # pylint: disable=line-too-long
                             for chunk in r.iter_content(chunk_size=128):
                                 fd.write(chunk)
                     except OSError:
