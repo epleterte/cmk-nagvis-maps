@@ -14,6 +14,7 @@ Installation
 Configuration
 =============
 Configuration lives in _~/.nagmaps.yml_
+
 Example config - groups are found in Livestatus, and complemented with data specified in the config it it exists:
 
     backend: 'livestatus1'
@@ -49,13 +50,13 @@ Usage
 =====
 
 Once the config is properly set up, run the script to generate maps.
-The script will write files to the directory specified by the `-o` argument, if not files are written to the current directory.
+The script will write files to the directory specified by the `-o` argument if present. If not, autodetection is attempted (_$OMD_ROOT/etc/nagvis/maps_, _/etc/nagvis/maps_).
 
     nagvis-maps -o /etc/nagvis/maps/
 
 The script can be run from cron to ensure generation of maps on a regular basis.
 
-    */30 * * * * nagvis-maps -o /etc/nagvis/maps/
+    */30 * * * * nagvis-maps
 
 License
 =======
