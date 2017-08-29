@@ -38,7 +38,7 @@ config = {
     'hostgroup_include': [],
     'hostgroup_exclude': [],
     'hostgroup_prefix': [''],
-    'hostgroup_postfix': [''],
+    'hostgroup_postfix': [],
     'backend': 'localhost',
     'image_path': sys.path[0],
     'nagvis_image_path': '',
@@ -48,6 +48,7 @@ config = {
 
 argparse = argparse.ArgumentParser()
 argparse.add_argument('-D', '--dump-config', action='store_true')
+argparse.add_argument('-d', '--debug', action='store_true')
 argparse.add_argument('-o', '--output-dir', nargs=1, default='.')
 argparse.add_argument('-m', '--mock-data', action='store_true')
 args = argparse.parse_args()
@@ -67,9 +68,11 @@ if args.output_dir != '':
     if not os.path.exists(args.output_dir):
         print("Output directory %s does not exist!" % (args.output_dir))
         sys.exit(1)
+if args.debug:
+    config['debug'] = True
 
 if args.mock_data:
-    response = '[["cust-finance"], ["cust-catering"]]'
+    response = '[["cust-finance", "Finance"], ["cust-catering", "Catering"]]'
 else:
     if config['livestatus_socket'] != '':
         if os.path.exists(config['livestatus_socket']):
@@ -100,7 +103,7 @@ else:
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.connect(socket_path)
         #hostgroups = s.send("GET hostgroups\nColumns: name\nOutputFormat: json\nResponseHeader: fixed16\nColumnHeaders: on\n")
-        s.send("GET hostgroups\nColumns: name\nOutputFormat: json\n")
+        s.send("GET hostgroups\nColumns: name alias\nOutputFormat: json\n")
 
         # Important: Close sending direction. That way
         # the other side knows we are finished.
@@ -115,11 +118,12 @@ else:
 
 #hostgroups = response.split('\n')
 json = json.loads(response)
-hostgroups = [x[0] for x in json]
+#hostgroups = [x[0] for x in json]
+hostgroups = json
 
 target_hostgroups = []
 
-for group in hostgroups:
+for group, alias in hostgroups:
     if config['debug']: print("looking at group %s" % (group))
     if group in target_hostgroups:
         if config['debug']:
@@ -130,15 +134,15 @@ for group in hostgroups:
             continue
     if len(config['hostgroup_include']) > 0:
         if group in config['hostgroup_include']:
-            target_hostgroups.append(group)
+            target_hostgroups.append([group, alias])
         continue
 
     if len(config['hostgroup_prefix']) == 0 or len(config['hostgroup_postfix']) == 0:
-        target_hostgroups.append(group)
+        target_hostgroups.append([group, alias])
         continue
     for prefix in config['hostgroup_prefix']:
         if group.startswith(prefix):
-            target_hostgroups.append(group)
+            target_hostgroups.append([group, alias])
             if config['debug']: print("prefix match: group %s added to target_hostgroups" % (group))
             break
     else:
@@ -148,8 +152,8 @@ for group in hostgroups:
         #print('already got a group, continuing')
         continue
     for postfix in config['hostgroup_postfix']:
-        if group.endswithwith(postfix):
-            target_hostgroups.append(group)
+        if group.endswith(postfix):
+            target_hostgroups.append([group, alias])
             if config['debug']: print("postfix match: group %s added to target_hostgroups" % (group))
             break
     else:
@@ -158,7 +162,7 @@ for group in hostgroups:
 if config['debug']: print(target_hostgroups)
 if not os.path.exists(os.path.join(sys.path[0], config['image_path'])):
     os.makedirs(os.path.join(sys.path[0], config['image_path']))
-for group in target_hostgroups:
+for group, alias in target_hostgroups:
     #logo = ''
     logo = 'placeholder.png'
     url = ''
@@ -182,6 +186,7 @@ for group in target_hostgroups:
         if 'url' in config['groups'][group]:
             url = config['groups'][group]['url']
     nagvis_map = """define global {{
+alias={alias}
 object_id=0
 iconset=std_big
 dynmap_object_filter=Filter: groups >= {group}\\n
@@ -202,12 +207,11 @@ x=50
 y=32
 url={url}
 url_target=_blank
-}}""".format(group=group, logo=logo, url=url)
-    print(nagvis_map)
+}}""".format(group=group, logo=logo, url=url, alias=alias)
     with open(os.path.join(args.output_dir, group + '.cfg'), 'w') as fd:
         fd.write(nagvis_map)
 
-    nagvis_overview_map = """define global {
+nagvis_overview_map = """define global {
 object_id=0
 iconset=std_big
 sources=dynmap
@@ -216,14 +220,14 @@ grid_show=0
 label_show=1
 label_text=[name]
 }"""
-    x_cord = 192
-    y_cord = 96
-    row = 1
-    col = 1
-    max_col = 6
+x_cord = 192
+y_cord = 96
+row = 1
+col = 1
+max_col = 6
 
-    for group in target_hostgroups:
-        nagvis_overview_map += """
+for group, alias in target_hostgroups:
+    nagvis_overview_map += """
 
 define hostgroup {{
 object_id=1
@@ -233,14 +237,15 @@ y={2}
 backend_id={3}
 }}""".format(group, x_cord, y_cord, config['backend'])
 
-        if col == max_col:
-            row += 1
-            col = 1
-            x_cord = 192
-            y_cord += 50
-        else:
-            col += 1
-            x_cord += 96
+    if col == max_col:
+        row += 1
+        col = 1
+        x_cord = 192
+        y_cord += 50
+    else:
+        col += 1
+        x_cord += 96
 
-    with open('overview.cfg', 'w') as fd:
-        fd.write(nagvis_overview_map)
+with open('overview.cfg', 'w') as fd:
+    print("writing overview map")
+    fd.write(nagvis_overview_map)
