@@ -12,6 +12,7 @@ import argparse
 import json
 import yaml
 import requests
+import logging
 
 config_path = os.path.expanduser("~/.nagmaps.yml")
 
@@ -43,8 +44,10 @@ config = {
     'image_path': sys.path[0],
     'nagvis_image_path': '',
     'livestatus_socket': '',
+    'loglevel': 'warning',
     'debug': False
 }
+
 
 argparse = argparse.ArgumentParser()
 argparse.add_argument('-D', '--dump-config', action='store_true')
@@ -59,17 +62,29 @@ if os.path.exists(config_path):
         # merge config:
         config.update(yml)
 else:
-    print('no config file found at %s, using defaults' % config_path)
+    print('[ WARN ] no config file found at %s, using defaults' % config_path)
+
+if args.debug:
+    #loglevel_numeric = getattr(logging, 'DEBUG', None)
+    #logging.basicConfig(loglevel=loglevel_numeric)
+    #print('setting debug mode: %s' % (loglevel_numeric))
+    config['loglevel'] = 'debug'
+
+## set up logging
+
+loglevel_numeric = getattr(logging, config['loglevel'].upper(), None)
+if not isinstance(loglevel_numeric, int):
+    raise ValueError('Invalid log level: %s' % config['loglevel'])
+logging.basicConfig(format='%(levelname)s:%(asctime)s:%(message)s', level=loglevel_numeric)
+
 
 if args.dump_config:
     print(config)
     sys.exit()
 if args.output_dir != '':
     if not os.path.exists(args.output_dir):
-        print("Output directory %s does not exist!" % (args.output_dir))
+        logging.error("Output directory %s does not exist!", args.output_dir)
         sys.exit(1)
-if args.debug:
-    config['debug'] = True
 
 if args.mock_data:
     response = '[["cust-finance", "Finance"], ["cust-catering", "Catering"]]'
@@ -86,16 +101,17 @@ else:
             elif os.path.exists('/var/lib/icinga/rw/live'):
                 socket_path = '/var/lib/icinga/rw/live'
             else:
-                print("Failed to detect Livestatus socket - exiting...")
+                logging.critical("Failed to detect Livestatus socket - exiting...")
                 sys.exit(1)
     if config['nagvis_image_path'] != '':
         if not os.path.exists(config['nagvis_image_path']):
-            print('Nagvis image path: Directory does not exist: %s' % (config['nagvis_image_path']))
+            logging.critical('Nagvis image path: Directory does not exist: %s', config['nagvis_image_path'])
+            sys.exit(1)
     else:
         if 'OMD_ROOT' in os.environ:
             config['nagvis_image_path'] = os.path.join(os.environ['OMD_ROOT'], 'local/share/nagvis/images/')
         else:
-            print("Failed to detect Nagvis image path - exiting...")
+            logging.critical("Failed to detect Nagvis image path - exiting...")
             sys.exit(1)
 
 
@@ -114,7 +130,9 @@ else:
 
         response = s.recv(100000000)
     except OSError as err:
-        print("Could not fetch host groups from LiveStatus: %s" % (err))
+        logging.critical("Could not fetch host groups from LiveStatus: %s", err)
+        sys.exit(1)
+
 
 #hostgroups = response.split('\n')
 json = json.loads(response)
@@ -124,10 +142,9 @@ hostgroups = json
 target_hostgroups = []
 
 for group, alias in hostgroups:
-    if config['debug']: print("looking at group %s" % (group))
+    logging.debug("found group %s", group)
     if group in target_hostgroups:
-        if config['debug']:
-            print("group %s already in target_hostgroups" % (group))
+        logging.debug("group %s already in target_hostgroups", group)
         continue
     if len(config['hostgroup_exclude']) > 0:
         if group in config['hostgroup_exclude']:
@@ -143,10 +160,10 @@ for group, alias in hostgroups:
     for prefix in config['hostgroup_prefix']:
         if group.startswith(prefix):
             target_hostgroups.append([group, alias])
-            if config['debug']: print("prefix match: group %s added to target_hostgroups" % (group))
+            logging.debug("prefix match: group %s added to target_hostgroups", group)
             break
     else:
-        print('should continue because of break')
+        logging.debug('should continue because of break')
         continue
     if group in target_hostgroups:
         #print('already got a group, continuing')
@@ -154,12 +171,12 @@ for group, alias in hostgroups:
     for postfix in config['hostgroup_postfix']:
         if group.endswith(postfix):
             target_hostgroups.append([group, alias])
-            if config['debug']: print("postfix match: group %s added to target_hostgroups" % (group))
+            logging.debug("postfix match: group %s added to target_hostgroups", group)
             break
     else:
         continue
 
-if config['debug']: print(target_hostgroups)
+logging.debug(target_hostgroups)
 if not os.path.exists(os.path.join(sys.path[0], config['image_path'])):
     os.makedirs(os.path.join(sys.path[0], config['image_path']))
 for group, alias in target_hostgroups:
@@ -178,7 +195,7 @@ for group, alias in target_hostgroups:
                             for chunk in r.iter_content(chunk_size=128):
                                 fd.write(chunk)
                     except OSError:
-                        print("Error while trying to fetch and write to disk: %s" % logo)
+                        logging.error("Error while trying to fetch and write to disk: %s", logo)
           #else:
           #    if not os.path.exists:
           #        logo = ''
@@ -230,6 +247,7 @@ for group, alias in target_hostgroups:
     nagvis_overview_map += """
 
 define hostgroup {{
+alias=Overview
 object_id=1
 hostgroup_name={0}
 x={1}
@@ -247,5 +265,5 @@ backend_id={3}
         x_cord += 96
 
 with open('overview.cfg', 'w') as fd:
-    print("writing overview map")
+    logging.debug("writing overview map")
     fd.write(nagvis_overview_map)
