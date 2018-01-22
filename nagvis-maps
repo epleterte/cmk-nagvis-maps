@@ -222,6 +222,7 @@ url_target=_blank
         fd.write(nagvis_map)
 
 nagvis_overview_map = """define global {
+alias=Overview
 object_id=0
 iconset=std_big
 sources=dynmap
@@ -240,7 +241,6 @@ for group, alias in target_hostgroups:
     nagvis_overview_map += """
 
 define hostgroup {{
-alias=Overview
 object_id=1
 hostgroup_name={0}
 x={1}
