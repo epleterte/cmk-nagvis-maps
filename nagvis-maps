@@ -35,7 +35,6 @@ config = {
     'nagvis_image_path': '',
     'livestatus_socket': '',
     'loglevel': 'warning',
-    'debug': False
 }
 
 argparse = argparse.ArgumentParser()
@@ -49,6 +48,8 @@ args = argparse.parse_args()
 
 if args.config:
     config_path = args.config
+if args.socket:
+    config['livestatus_socket'] = args.socket
 
 if os.path.exists(config_path):
     with open(config_path, 'r') as ymlfile:

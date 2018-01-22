@@ -43,7 +43,8 @@ This is the full set of configuration parameters:
     backend           - Specify livestatus backend. Default is localhost.
     image_path        - Specify where images (logos) should be fetched from.
     nagvis_image_path - Nagvis image path (eg. $OMD_ROOT/local/share/nagvis/images/)
-    debug             - Debug mode. Default is unset (False).
+    loglevel          - Loglevel: info, warning, error, critical. Default is warning.
+    livestatus_socket - Livestatus socket path. Default: Autodetect
 
 
 Usage
