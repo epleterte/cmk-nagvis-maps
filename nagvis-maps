@@ -257,6 +257,6 @@ backend_id={3}
         col += 1
         x_cord += 96
 
-with open('overview.cfg', 'w') as fd:
+with open(os.path.join(args.output_dir, 'overview.cfg'), 'w') as fd:
     logging.debug("writing overview map")
     fd.write(nagvis_overview_map)
